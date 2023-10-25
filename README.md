@@ -1,6 +1,6 @@
 # Orange PI Zero 3 bootloader build instructions
 This repo contains instruction on how to build BL (ATF + U-Boot) for
-relatively cheap and quit competent board powered by H618 - Orange PI Zero 3.
+relatively cheap and quite competent board powered by H618 SoC - Orange PI Zero 3.
 
 The result of those instructions has been tested on 1GB variant of the board.
 For things I've tested, the Ethernet was working just fine along with
@@ -9,7 +9,7 @@ through router/switch), SD card and USB.
 
 ## Prerequisites
 - Linux machine to perform the build (tested on Ubuntu server 20.04.6 LTS)
-- Some cross compiler for aarch64, this one should cut:
+- Some cross compiler for aarch64. This one should cut:
   https://developer.arm.com/-/media/Files/downloads/gnu-a/10.3-2021.07/binrel/gcc-arm-10.3-2021.07-x86_64-aarch64-none-linux-gnu.tar.xz
   Or install one via package manager eg. for ubuntu: 
   ```
@@ -49,14 +49,15 @@ in addition has properly exported variable ```BL31```. See last point in ATF
 section.
 
 - Clone the U-Boot sources, you can also use
-u-boot-master-252592214f79d8206c3cf0056a8827a0010214e0.zip
-from src-mirror directory in this repo:
+```u-boot-master-252592214f79d8206c3cf0056a8827a0010214e0.zip```
+from ```src-mirror``` directory in this repo:
 ```
 git clone https://github.com/u-boot/u-boot.git
 cd u-boot && git checkout 252592214f79d8206c3cf0056a8827a0010214e0
 ```
-- Apply the patch from this repo while being in ```u-boot``` directory,
-  which adds defconfig for Orange PI Zero 3, proper DTS, DDR4 DRAM,
+- Copy the patch file from this repo to ```u-boot``` directory and apply it
+  while still being in ```u-boot``` directory.
+  The patch adds defconfig for Orange PI Zero 3, proper DTS, DDR4 DRAM,
   and PMIC support (not sure if the latter is fully functional, never needed it):
 ```
 git apply 0001-Defconfig-For-Orangepi-Zero3-PMIC-Env-From-Fat.patch
@@ -75,7 +76,7 @@ CROSS_COMPILE=aarch64-linux-gnu- make orangepi_zero3_defconfig
 CROSS_COMPILE=aarch64-linux-gnu- make -j $((nproc+2)) CONFIG_SPL_IMAGE_TYPE=sunxi_egon
 ```
 
-This will produce you a combined ATF+U-Boot bootloader image ready to be flashed
+This will produce a combined ATF+U-Boot bootloader image ready to be flashed
 to SD card. The image can be found in ```u-boot``` directory as ```u-boot-sunxi-with-spl.bin```.
 
 ## Flashing to SD card
@@ -122,7 +123,7 @@ echo -e -n '\x00\x02\x01\x00\x10' | dd if=/dev/stdin of=orangepi-zero3.sdcard bs
 ```
 dd if=u-boot-sunxi-with-spl.bin of=orangepi-zero3.sdcard bs=1024 seek=8 conv=notrunc
 ```
-- Now you can simply flash the sdcard with above sdcard image like so 
+- Now you can simply flash the SD Card with above image like so 
   (or the one from ```orangepi-zero3.sdcard.7z``` after un7zipping it first):
 ```
 sudo dd if=orangepi-zero3.sdcard of=/dev/<sd card dev> bs=1M
