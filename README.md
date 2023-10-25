@@ -1,10 +1,11 @@
 # Orange PI Zero 3 bootloader build instructions
 This repo contains instruction on how to build BL (ATF + U-Boot) for
-cheap board powered by H618 - Orange PI Zero 3.
+relatively cheap and quit competent board powered by H618 - Orange PI Zero 3.
 
 The result of those instructions has been tested on 1GB variant of the board.
-For things I've tested the Ethernet was working just fine along with tftp,
-SD card and USB.
+For things I've tested, the Ethernet was working just fine along with
+tftp (only while connected point to point, I had some troubles to get it working
+through router/switch), SD card and USB.
 
 ## Prerequisites
 - Linux machine to perform the build (tested on Ubuntu server 20.04.6 LTS)
@@ -22,7 +23,7 @@ SD card and USB.
 ### ATF
 All points below must be done in a single instance of the terminal.
 - Unset variable so build won't fail (got caught by this - 
-  the only reason I mentioning this):
+  the only reason I'm mentioning this):
 ```
 unset BL31
 ```
@@ -55,10 +56,14 @@ git clone https://github.com/u-boot/u-boot.git
 cd u-boot && git checkout 252592214f79d8206c3cf0056a8827a0010214e0
 ```
 - Apply the patch from this repo while being in ```u-boot``` directory,
-  which adds defconfig for Orange PI Zero 3, DTS, DDR4 dram,
+  which adds defconfig for Orange PI Zero 3, proper DTS, DDR4 DRAM,
   and PMIC support (not sure if the latter is fully functional, never needed it):
 ```
 git apply 0001-Defconfig-For-Orangepi-Zero3-PMIC-Env-From-Fat.patch
+```
+or alternitavely with patch:
+```
+patch -p1 < 0001-Defconfig-For-Orangepi-Zero3-PMIC-Env-From-Fat.patch
 ```
 - Generate ```.config``` by utilizing defconfig for Zero3 board, invoke
   (in cloned ```u-boot``` directory):
@@ -92,24 +97,25 @@ environment there by default. This can be done rootless by mtools package, as
 described below.
 
 ### U-Boot with FAT32 partition
-Reference SD card image can be found in archive ```orangepi-zero3.7z``` in this repo.
-Remember to un7zip it before flashing to sd card!
+Reference SD card image can be found in archive ```orangepi-zero3.sdcard.7z``` in
+this repo. Remember to un7zip it before flashing to sd card!
 - Install mtools:
 ```
 sudo apt update
 sudo apt -y install mtools
 ```
-- Create zeroed 256 MiB file:
+- Create zeroed 256 MiB file (can be larger if you wish to):
 ```
 dd if=/dev/zero of=orangepi-zero3.sdcard bs=1M count=256
 ```
-- Format it in FAT32 with mtools:
+- Format it with FAT32 by using mtools:
 ```
 mformat -F -i orangepi-zero3.sdcard
 ```
-- Move the FAT a bit further (to 2MiB offset) so we fit BL between disk metadata and the FAT itself:
+- Move the FAT a bit further (to 2MiB offset) so we fit BL in between disk metadata and the FAT itself:
 ```
 dd if=orangepi-zero3.sdcard of=orangepi-zero3.sdcard bs=1 skip=$(($(hexdump -s 11 -n 2 -e '"%u"' ./orangepi-zero3.sdcard)*$(hexdump -s 14 -n 2 -e '"%u"' ./orangepi-zero3.sdcard))) seek=2097152 count=16 conv=notrunc
+
 echo -e -n '\x00\x02\x01\x00\x10' | dd if=/dev/stdin of=orangepi-zero3.sdcard bs=1 seek=11 conv=notrunc
 ```
 - Flash the bootloader to altered card image:
@@ -117,7 +123,7 @@ echo -e -n '\x00\x02\x01\x00\x10' | dd if=/dev/stdin of=orangepi-zero3.sdcard bs
 dd if=u-boot-sunxi-with-spl.bin of=orangepi-zero3.sdcard bs=1024 seek=8 conv=notrunc
 ```
 - Now you can simply flash the sdcard with above sdcard image like so 
-  (or the one from orangepi-zero3.7z after un7zipping it first):
+  (or the one from ```orangepi-zero3.sdcard.7z``` after un7zipping it first):
 ```
 sudo dd if=orangepi-zero3.sdcard of=/dev/<sd card dev> bs=1M
 ```
@@ -126,8 +132,8 @@ eg.
 sudo dd if=orangepi-zero3.sdcard of=/dev/sdb bs=1M
 ```
 
-The board should boot right away and print bootlog to ```DEBUG TTL UART``` at boudrate 115200 (the one next to SIP3 label).
-See image to find the proper UART port:
+The board should boot right away and print bootlog to ```DEBUG TTL UART``` (the one next to SIP3 label)
+with boudrate 115200. See image to find the proper UART port:
 http://www.orangepi.org/img/zero3/0627-zero3%20(6).png
 
 Reference bootlog:
